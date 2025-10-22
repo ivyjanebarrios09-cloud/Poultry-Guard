@@ -32,8 +32,8 @@ type FlyCountLog = {
 
 export default function FlyCountPage() {
   const firestore = useFirestore();
-  const flyCountLogsQuery = firestore ? query(collection(firestore, 'fly-count-logs'), orderBy('timestamp', 'desc')) : null;
-  const { data: flyCountLogs, loading, error } = useCollection<FlyCountLog>(flyCountLogsQuery);
+  const flyCountsQuery = firestore ? query(collection(firestore, 'flyCounts'), orderBy('timestamp', 'desc')) : null;
+  const { data: flyCountLogs, loading, error } = useCollection<FlyCountLog>(flyCountsQuery);
 
   return (
     <div className="flex flex-col gap-8">

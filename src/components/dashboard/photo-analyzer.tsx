@@ -19,7 +19,7 @@ import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, Firestore } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, Firestore } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const initialState = {
@@ -52,11 +52,13 @@ async function toDataURL(url: string): Promise<string> {
 
 const saveToFirestore = (db: Firestore, data: { flyCount: number; analysis: string; }) => {
   if (!db) return;
+  const newDocRef = doc(collection(db, 'flyCounts'));
   const log = {
     ...data,
+    id: newDocRef.id,
     timestamp: serverTimestamp(),
   };
-  addDoc(collection(db, 'fly-count-logs'), log);
+  setDoc(newDocRef, log);
 };
 
 
