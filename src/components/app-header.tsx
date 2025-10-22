@@ -22,7 +22,6 @@ const menuItems = [
   { href: '/dashboard', label: 'Home' },
   { href: '/dashboard/history', label: 'History' },
   { href: '/dashboard/calendar', label: 'Calendar' },
-  { href: '/dashboard/fly-count', label: 'Logs'},
   { href: '/dashboard/photo', label: 'Photo' },
   { href: '/dashboard/instructions', label: 'Instructions' },
   { href: '/dashboard/about', label: 'About' },
