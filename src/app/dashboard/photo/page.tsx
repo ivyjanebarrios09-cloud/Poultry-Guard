@@ -1,13 +1,15 @@
-import { PhotoAnalyzer } from "@/components/dashboard/photo-analyzer";
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
+import { PhotoAnalyzer } from '@/components/dashboard/photo-analyzer';
 
 export default function PhotoPage() {
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Photo Analysis</h1>
-        <p className="text-muted-foreground">
-          Use AI to get a textual description of an uploaded photo.
-        </p>
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+          <ChevronLeft className="h-5 w-5" />
+          <span className="font-semibold">Latest Photo</span>
+        </Link>
       </div>
       <PhotoAnalyzer />
     </div>

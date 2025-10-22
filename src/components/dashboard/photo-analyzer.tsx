@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormStatus } from 'react-dom';
+import { useFormStatus, useActionState } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,11 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { describePhotoAction } from '@/actions/photo-actions';
-import { LoaderCircle, Image as ImageIcon, Bot, Upload } from 'lucide-react';
-import React, { useState, useRef, useActionState } from 'react';
+import { LoaderCircle, Bot, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
@@ -29,9 +27,9 @@ const initialState = {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className="bg-accent hover:bg-accent/90">
-      {pending ? <LoaderCircle className="animate-spin" /> : <ImageIcon />}
-      {pending ? 'Analyzing...' : 'Analyze Photo'}
+    <Button type="submit" disabled={pending}>
+      {pending ? <LoaderCircle className="animate-spin" /> : '✨'}
+      {pending ? 'Analyzing...' : 'Describe Photo'}
     </Button>
   );
 }
@@ -39,92 +37,77 @@ function SubmitButton() {
 export function PhotoAnalyzer() {
   const [state, formAction] = useActionState(describePhotoAction, initialState);
   const [preview, setPreview] = useState<string | null>(placeholder.imageUrl);
-  const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoDataUri, setPhotoDataUri] = useState<string | null>(placeholder.imageUrl);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setPreview(result);
-        setPhotoDataUri(result);
-      };
-      reader.readAsDataURL(file);
-    }
+  // In a real app, this would fetch the latest photo
+  const handleRefresh = () => {
+    // For now, we'll just cycle through some placeholder seeds
+    const newSeed = Math.floor(Math.random() * 100) + 1;
+    const newUrl = `https://picsum.photos/seed/${newSeed}/1280/720`;
+    setPreview(newUrl);
+    setPhotoDataUri(newUrl);
   };
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
-      <Card className="shadow-lg">
+    <div className="flex flex-col items-center">
+      <div className="w-full max-w-2xl">
         <form action={formAction}>
           <input type="hidden" name="photoDataUri" value={photoDataUri || ''} />
-          <CardHeader>
-            <CardTitle>Upload Photo</CardTitle>
-            <CardDescription>
-              Upload a photo from your farm for AI analysis.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="aspect-video w-full relative overflow-hidden rounded-lg border">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Latest Monitoring Photo</CardTitle>
+              <CardDescription>
+                The most recent photo from your monitoring device.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="aspect-video w-full relative overflow-hidden rounded-lg border">
                 {preview && (
-                    <Image
-                        src={preview}
-                        alt="Photo preview"
-                        fill
-                        className="object-cover"
-                        data-ai-hint={placeholder.imageHint}
-                    />
+                  <Image
+                    src={preview}
+                    alt="Latest monitoring photo"
+                    fill
+                    className="object-cover"
+                    data-ai-hint="monitoring device"
+                  />
                 )}
-                {!preview && (
-                    <div className="flex items-center justify-center h-full bg-muted">
-                        <ImageIcon className="h-16 w-16 text-muted-foreground" />
-                    </div>
-                )}
-            </div>
-             <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept="image/*"
-            />
-            <Button type="button" variant="outline" onClick={handleUploadClick} className="w-full">
-              <Upload className="mr-2 h-4 w-4" />
-              Choose File
-            </Button>
-          </CardContent>
-          <CardFooter>
-            <SubmitButton />
-          </CardFooter>
+              </div>
+            </CardContent>
+            <CardFooter className="justify-end gap-2">
+                <SubmitButton />
+                <Button type="button" variant="ghost" onClick={handleRefresh}>
+                    <RefreshCw />
+                    Refresh
+                </Button>
+            </CardFooter>
+          </Card>
         </form>
-      </Card>
 
-      <div className="space-y-8">
         {(useFormStatus().pending || state.description || state.error) && (
-            <Card>
-                <CardHeader className="flex flex-row items-start gap-4">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                    <Bot className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                    <CardTitle>AI Analysis</CardTitle>
-                    <CardDescription>
-                        Here&apos;s what the AI sees in your photo.
-                    </CardDescription>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {useFormStatus().pending && <div className="flex items-center gap-2 text-muted-foreground"><LoaderCircle className="animate-spin h-4 w-4" /><span>Analyzing photo...</span></div>}
-                    {state.description && <p className="prose prose-sm max-w-none text-foreground">{state.description}</p>}
-                    {state.error && <p className="text-destructive">{state.error}</p>}
-                </CardContent>
-            </Card>
+          <Card className="mt-8">
+            <CardHeader className="flex flex-row items-start gap-4">
+              <div className="bg-primary/10 p-2 rounded-full">
+                <Bot className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle>AI Analysis</CardTitle>
+                <CardDescription>
+                  Here&apos;s what the AI sees in your photo.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {useFormStatus().pending && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <LoaderCircle className="animate-spin h-4 w-4" />
+                  <span>Analyzing photo...</span>
+                </div>
+              )}
+              {state.description && <p className="prose prose-sm max-w-none text-foreground">{state.description}</p>}
+              {state.error && <p className="text-destructive">{state.error}</p>}
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
