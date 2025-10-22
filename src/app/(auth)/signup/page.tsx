@@ -24,8 +24,9 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Bird, LoaderCircle } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -66,7 +67,7 @@ export default function SignupPage() {
     <Card className="shadow-lg">
       <CardHeader className="text-center">
         <div className="flex justify-center items-center mb-4">
-          <Bird className="h-10 w-10 text-primary" />
+          <Image src="/image/logoo.png" alt="PoultryGuard Logo" width={40} height={40} />
         </div>
         <CardTitle className="font-headline text-3xl">Create an Account</CardTitle>
         <CardDescription>Start monitoring your poultry farm today</CardDescription>
