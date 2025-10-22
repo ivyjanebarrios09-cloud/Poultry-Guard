@@ -9,6 +9,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'PoultryGuard Pro',
   description: 'Advanced Poultry Monitoring System',
+  icons: {
+    icon: '/image/favicon.ico',
+  },
 };
 
 export default function RootLayout({
