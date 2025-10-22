@@ -73,7 +73,7 @@ export default function AboutPage() {
                 <Card key={goal.title} className="shadow-md hover:shadow-xl transition-shadow">
                     <CardHeader className="items-center">
                         <div className="relative h-24 w-24 mb-4">
-                            <Image src={goal.imageUrl} alt={goal.title} layout="fill" objectFit="contain" data-ai-hint={goal.aiHint} />
+                            <Image src={goal.imageUrl} alt={goal.title} fill style={{objectFit: 'contain'}} data-ai-hint={goal.aiHint} />
                         </div>
                         <CardTitle className="text-center text-xl">{goal.title}</CardTitle>
                     </CardHeader>
