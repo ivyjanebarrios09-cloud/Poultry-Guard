@@ -18,62 +18,48 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  AreaChart,
-  Area,
 } from 'recharts';
-import { devices, flyCountLogs, notifications } from '@/lib/data';
+import { devices, notifications } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
 import { format, formatDistanceToNow } from 'date-fns';
-import { AlertTriangle, Download } from 'lucide-react';
+import { AlertTriangle, Download, LoaderCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useFirestore } from '@/firebase';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useMemo } from 'react';
 
-const flyCountTrendData = [
-    { date: 'Sep 28', count: 60 },
-    { date: 'Sep 29', count: 62 },
-    { date: 'Sep 30', count: 65 },
-    { date: 'Oct 1', count: 68 },
-    { date: 'Oct 2', count: 70 },
-    { date: 'Oct 3', count: 72 },
-    { date: 'Oct 4', count: 75 },
-    { date: 'Oct 5', count: 78 },
-    { date: 'Oct 6', count: 80 },
-    { date: 'Oct 7', count: 82 },
-    { date: 'Oct 8', count: 85 },
-    { date: 'Oct 9', count: 88 },
-    { date: 'Oct 10', count: 90 },
-    { date: 'Oct 11', count: 92 },
-    { date: 'Oct 12', count: 95 },
-    { date: 'Oct 13', count: 98 },
-    { date: 'Oct 14', count: 100 },
-    { date: 'Oct 15', count: 102 },
-    { date: 'Oct 16', count: 105 },
-    { date: 'Oct 17', count: 108 },
-    { date: 'Oct 18', count: 110 },
-    { date: 'Oct 19', count: 115 },
-    { date: 'Oct 20', count: 120 },
-    { date: 'Oct 21', count: 125 },
-    { date: 'Oct 22', count: 130 },
-];
-
-const detailedLogs = [
-  { id: '1', count: 148, location: 'Latest Photo Analysis', time: 'Oct 22, 2025, 6:32:17 PM', image: 'https://picsum.photos/seed/1/40/40', hint: 'fly trap' },
-  { id: '2', count: 79, location: 'Latest Photo Analysis', time: 'Oct 22, 2025, 6:28:49 PM', image: 'https://picsum.photos/seed/2/40/40', hint: 'fly trap' },
-  { id: '3', count: 110, location: 'Latest Photo Analysis', time: 'Oct 21, 2025, 3:46:28 AM', image: 'https://picsum.photos/seed/3/40/40', hint: 'fly trap' },
-  { id: '4', count: 107, location: 'Latest Photo Analysis', time: 'Oct 21, 2025, 3:37:14 AM', image: 'https://picsum.photos/seed/4/40/40', hint: 'fly trap' },
-]
+type FlyCountLog = {
+  id: string;
+  flyCount: number;
+  analysis: string;
+  timestamp: {
+    seconds: number;
+    nanoseconds: number;
+  } | null;
+};
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const latestFlyCount = flyCountLogs[0]?.count || 0;
+  const firestore = useFirestore();
+
+  const flyCountsQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'flyCounts'), orderBy('timestamp', 'desc'));
+  }, [firestore]);
+
+  const { data: flyCountLogs, loading: loadingLogs } = useCollection<FlyCountLog>(flyCountsQuery);
+
+  const latestLog = flyCountLogs?.[0];
   const onlineDevices = devices.filter(d => d.status === 'Online').length;
   
   const getUsername = (email: string | null) => {
@@ -81,10 +67,28 @@ export default function DashboardPage() {
     return email.split('@')[0];
   };
 
-  const getStatusColor = (status: string) => {
-    if (status.toLowerCase().includes('critical')) return 'bg-red-500';
-    if (status.toLowerCase().includes('warning')) return 'bg-yellow-500';
-    return 'bg-green-500';
+  const chartData = useMemo(() => {
+    if (!flyCountLogs) return [];
+    return flyCountLogs
+      .map(log => {
+        const date = log.timestamp ? new Date(log.timestamp.seconds * 1000) : new Date();
+        return {
+          date: format(date, 'MMM d'),
+          count: log.flyCount,
+        };
+      })
+      .reverse();
+  }, [flyCountLogs]);
+  
+  const getLogTime = (timestamp: FlyCountLog['timestamp']) => {
+    if (!timestamp) return 'N/A';
+    const date = new Date(timestamp.seconds * 1000);
+    return format(date, 'MMM d, yyyy, h:mm:ss a');
+  };
+
+  const getRelativeTime = (timestamp: FlyCountLog['timestamp']) => {
+    if (!timestamp) return '';
+    return formatDistanceToNow(new Date(timestamp.seconds * 1000), { addSuffix: true });
   }
 
   return (
@@ -102,9 +106,15 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">Latest Fly Count</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{latestFlyCount}</div>
-            <p className="text-xs text-muted-foreground">Latest Photo Analysis</p>
-            <p className="text-xs text-muted-foreground">about 8 hours ago</p>
+            {loadingLogs ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <>
+                <div className="text-4xl font-bold">{latestLog?.flyCount ?? 'N/A'}</div>
+                <p className="text-xs text-muted-foreground">{latestLog?.analysis ?? 'No analysis yet'}</p>
+                <p className="text-xs text-muted-foreground">{latestLog ? getRelativeTime(latestLog.timestamp) : ''}</p>
+              </>
+            )}
           </CardContent>
         </Card>
         <Card className="shadow-sm">
@@ -151,14 +161,14 @@ export default function DashboardPage() {
         <Card className="shadow-sm lg:col-span-4">
             <CardHeader>
                 <CardTitle>Fly Count Trend</CardTitle>
-                <CardDescription>Average daily fly counts over the last 30 days.</CardDescription>
+                <CardDescription>Average daily fly counts from recent analyses.</CardDescription>
             </CardHeader>
             <CardContent className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={flyCountTrendData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="date" tick={{fontSize: 12}} tickLine={false} axisLine={false} />
-                    <YAxis domain={[60, 130]} tick={{fontSize: 12}} tickLine={false} axisLine={false} />
+                    <YAxis domain={['auto', 'auto']} tick={{fontSize: 12}} tickLine={false} axisLine={false} />
                     <Tooltip 
                       contentStyle={{
                         backgroundColor: 'hsl(var(--background))',
@@ -193,6 +203,7 @@ export default function DashboardPage() {
                     </Badge>
                 </div>
             ))}
+             {notifications.length === 0 && <p className="text-sm text-center text-muted-foreground">No new notifications.</p>}
           </CardContent>
         </Card>
       </div>
@@ -201,7 +212,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Detailed Logs</CardTitle>
           <CardDescription>
-            A comprehensive record of all fly count readings.
+            A comprehensive record of all fly count readings from Firestore.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -209,22 +220,40 @@ export default function DashboardPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Count</TableHead>
-                <TableHead>Location</TableHead>
+                <TableHead>Analysis</TableHead>
                 <TableHead>Time</TableHead>
                 <TableHead>Image</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {detailedLogs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="font-medium">{log.count}</TableCell>
-                  <TableCell>{log.location}</TableCell>
-                  <TableCell>{log.time}</TableCell>
-                  <TableCell>
-                    <Image src={log.image} alt="Fly trap image" width={40} height={40} className="rounded-md" data-ai-hint={log.hint} />
+              {loadingLogs && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center">
+                    <div className="flex justify-center items-center gap-2">
+                      <LoaderCircle className="animate-spin h-4 w-4" />
+                      <span>Loading logs...</span>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
+              {!loadingLogs && flyCountLogs && flyCountLogs.length > 0 ? (
+                flyCountLogs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="font-medium">{log.flyCount}</TableCell>
+                    <TableCell>{log.analysis}</TableCell>
+                    <TableCell>{getLogTime(log.timestamp)}</TableCell>
+                    <TableCell>
+                      <Image src={`https://picsum.photos/seed/${log.id}/40/40`} alt="Fly trap image" width={40} height={40} className="rounded-md" data-ai-hint="fly trap" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                !loadingLogs && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">No logs found in Firestore.</TableCell>
+                  </TableRow>
+                )
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -233,3 +262,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

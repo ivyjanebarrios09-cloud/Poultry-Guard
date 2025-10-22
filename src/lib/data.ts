@@ -38,3 +38,5 @@ export const notifications: Notification[] = [
 
 // This data is now fetched from Firestore
 export const flyCountLogs: FlyCountLog[] = [];
+
+    
