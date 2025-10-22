@@ -50,7 +50,7 @@ async function toDataURL(url: string): Promise<string> {
     });
 }
 
-const saveToFirestore = (db: Firestore, data: { flyCount: number; analysis: string; }, onSuccess: () => void, onError: (error: Error) => void) => {
+const saveToFirestore = (db: Firestore, data: { flyCount: number; analysis: string; imageUrl: string; }, onSuccess: () => void, onError: (error: Error) => void) => {
   if (!db) {
     onError(new Error("Firestore is not initialized."));
     return;
@@ -151,10 +151,10 @@ export function PhotoAnalyzer() {
   }, []);
 
   useEffect(() => {
-    if (state.flyCount !== null && state.analysis && state.timestamp > lastProcessedTimestamp.current) {
+    if (state.flyCount !== null && state.analysis && state.timestamp > lastProcessedTimestamp.current && preview) {
       saveToFirestore(
         firestore!,
-        { flyCount: state.flyCount, analysis: state.analysis },
+        { flyCount: state.flyCount, analysis: state.analysis, imageUrl: preview },
         () => {
           toast({
             title: "Analysis Saved",
@@ -171,7 +171,7 @@ export function PhotoAnalyzer() {
         }
       );
     }
-  }, [state, firestore, toast]);
+  }, [state, firestore, toast, preview]);
 
   const handleRefresh = () => {
     fetchLatestPhoto();

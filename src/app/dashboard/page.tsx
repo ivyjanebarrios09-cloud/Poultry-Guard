@@ -42,6 +42,7 @@ type FlyCountLog = {
   id: string;
   flyCount: number;
   analysis: string;
+  imageUrl: string;
   timestamp: {
     seconds: number;
     nanoseconds: number;
@@ -243,7 +244,11 @@ export default function DashboardPage() {
                     <TableCell>{log.analysis}</TableCell>
                     <TableCell>{getLogTime(log.timestamp)}</TableCell>
                     <TableCell>
-                      <Image src={`https://picsum.photos/seed/${log.id}/40/40`} alt="Fly trap image" width={40} height={40} className="rounded-md" data-ai-hint="fly trap" />
+                      {log.imageUrl ? (
+                        <Image src={log.imageUrl} alt="Fly trap image" width={40} height={40} className="rounded-md" data-ai-hint="fly trap" unoptimized />
+                      ) : (
+                        <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -262,5 +267,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
