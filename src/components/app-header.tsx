@@ -54,43 +54,64 @@ export function AppHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
-      <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background px-4 md:px-6">
+      {/* Left side: Logo */}
+      <div className="flex items-center gap-2">
         <Link
           href="/dashboard"
           className="flex items-center gap-2 text-lg font-semibold md:text-base"
         >
           <Image src="/image/logoo.png" alt="PoultryGuard Logo" width={32} height={32} className="text-primary" />
-          <span className="sr-only">PoultryGuard</span>
+          <span className="hidden sm:inline-block">PoultryGuard</span>
         </Link>
+      </div>
+
+      {/* Mobile Menu Trigger */}
+      <div className="md:hidden">
+        <Sheet>
+            <SheetTrigger asChild>
+            <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+            >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
+            </Button>
+            </SheetTrigger>
+            <SheetContent side="left">
+            <nav className="grid gap-6 text-lg font-medium">
+                <Link
+                href="/dashboard"
+                className="flex items-center gap-2 text-lg font-semibold"
+                >
+                <Image src="/image/logoo.png" alt="PoultryGuard Logo" width={32} height={32} className="text-primary" />
+                <span className="sr-only">PoultryGuard</span>
+                </Link>
+                {menuItems.map((item) => (
+                    <Link
+                        key={item.label}
+                        href={item.href}
+                        className={cn(
+                            "transition-colors hover:text-foreground",
+                            pathname === item.href ? "text-foreground" : "text-muted-foreground"
+                        )}
+                        >
+                        {item.label}
+                    </Link>
+                ))}
+            </nav>
+            </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Center: Navigation Links (Desktop) */}
+      <nav className="hidden md:flex flex-row items-center gap-5 text-sm lg:gap-6">
         {navLinks}
       </nav>
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="shrink-0 md:hidden"
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle navigation menu</span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left">
-          <nav className="grid gap-6 text-lg font-medium">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 text-lg font-semibold"
-            >
-              <Image src="/image/logoo.png" alt="PoultryGuard Logo" width={32} height={32} className="text-primary" />
-              <span className="sr-only">PoultryGuard</span>
-            </Link>
-            {navLinks}
-          </nav>
-        </SheetContent>
-      </Sheet>
-      <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-        <div className="ml-auto flex-1 sm:flex-initial" />
+
+      {/* Right side: User Menu */}
+      <div className="flex items-center gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
