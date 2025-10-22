@@ -27,7 +27,7 @@ const initialState = {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
+    <Button type="submit" disabled={pending || !useFormStatus().data?.get('photoDataUri')}>
       {pending ? <LoaderCircle className="animate-spin" /> : '✨'}
       {pending ? 'Analyzing...' : 'Describe Photo'}
     </Button>
@@ -45,10 +45,12 @@ export function PhotoAnalyzer() {
   const fetchLatestPhoto = async () => {
     setIsLoading(true);
     setFetchError(null);
+    setPreview(null);
+    setPhotoDataUri(null);
     try {
       const { data, error } = await supabase.storage
         .from('poultryguardPhoto')
-        .list('', {
+        .list('photos', {
           limit: 1,
           offset: 0,
           sortBy: { column: 'created_at', order: 'desc' },
@@ -58,11 +60,11 @@ export function PhotoAnalyzer() {
         throw error;
       }
       
-      if (data && data.length > 0) {
+      if (data && data.length > 0 && data[0].name !== '.emptyFolderPlaceholder') {
         const latestFile = data[0];
         const { data: publicUrlData } = supabase.storage
           .from('poultryguardPhoto')
-          .getPublicUrl(latestFile.name);
+          .getPublicUrl(`photos/${latestFile.name}`);
         
         if (publicUrlData) {
           const imageUrl = publicUrlData.publicUrl;
@@ -112,8 +114,8 @@ export function PhotoAnalyzer() {
                 {isLoading ? (
                   <Skeleton className="w-full h-full" />
                 ) : fetchError ? (
-                  <div className="w-full h-full flex items-center justify-center bg-muted text-destructive-foreground p-4">
-                    <p>{fetchError}</p>
+                  <div className="w-full h-full flex items-center justify-center bg-muted p-4 text-center">
+                    <p className="text-destructive">{fetchError}</p>
                   </div>
                 ) : preview ? (
                   <Image
@@ -132,11 +134,11 @@ export function PhotoAnalyzer() {
               </div>
             </CardContent>
             <CardFooter className="justify-end gap-2">
-                <SubmitButton />
-                <Button type="button" variant="ghost" onClick={handleRefresh}>
-                    <RefreshCw />
+                <Button type="button" variant="outline" onClick={handleRefresh} disabled={isLoading}>
+                    <RefreshCw className={isLoading ? "animate-spin" : ""} />
                     Refresh
                 </Button>
+                <SubmitButton />
             </CardFooter>
           </Card>
         </form>
