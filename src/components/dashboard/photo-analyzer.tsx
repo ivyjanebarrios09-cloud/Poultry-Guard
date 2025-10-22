@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState, useRef } from 'react';
+import { useActionState, useEffect, useState, useRef, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -68,6 +68,7 @@ export function PhotoAnalyzer() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   
   const formRef = useRef<HTMLFormElement>(null);
   const supabase = createSupabaseClient();
@@ -124,7 +125,9 @@ export function PhotoAnalyzer() {
             formData.append('imageUrl', imageUrl);
             
             setIsAnalyzing(true);
-            formAction(formData);
+            startTransition(() => {
+              formAction(formData);
+            });
 
           } else {
              throw new Error('Could not get public URL for the latest photo.');
