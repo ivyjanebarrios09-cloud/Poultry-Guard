@@ -19,7 +19,7 @@ import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp, Firestore } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, Firestore } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const initialState = {
@@ -50,15 +50,25 @@ async function toDataURL(url: string): Promise<string> {
     });
 }
 
-const saveToFirestore = (db: Firestore, data: { flyCount: number; analysis: string; }) => {
-  if (!db) return;
-  const newDocRef = doc(collection(db, 'flyCounts'));
+const saveToFirestore = (db: Firestore, data: { flyCount: number; analysis: string; }, onSuccess: () => void, onError: (error: Error) => void) => {
+  if (!db) {
+    onError(new Error("Firestore is not initialized."));
+    return;
+  }
+  const collectionRef = collection(db, 'flyCounts');
   const log = {
     ...data,
-    id: newDocRef.id,
     timestamp: serverTimestamp(),
   };
-  setDoc(newDocRef, log);
+
+  addDoc(collectionRef, log)
+    .then(() => {
+      onSuccess();
+    })
+    .catch((error) => {
+      console.error("Error writing document: ", error);
+      onError(error);
+    });
 };
 
 
@@ -142,20 +152,24 @@ export function PhotoAnalyzer() {
 
   useEffect(() => {
     if (state.flyCount !== null && state.analysis && state.timestamp > lastProcessedTimestamp.current) {
-      if (firestore) {
-        saveToFirestore(firestore, { flyCount: state.flyCount, analysis: state.analysis });
-        toast({
-          title: "Analysis Saved",
-          description: `Fly count of ${state.flyCount} has been saved to the database.`,
-        });
-        lastProcessedTimestamp.current = state.timestamp;
-      } else {
-         toast({
-          variant: "destructive",
-          title: "Firestore Error",
-          description: "Could not connect to the database to save the result.",
-        });
-      }
+      saveToFirestore(
+        firestore!,
+        { flyCount: state.flyCount, analysis: state.analysis },
+        () => {
+          toast({
+            title: "Analysis Saved",
+            description: `Fly count of ${state.flyCount} has been saved to the database.`,
+          });
+          lastProcessedTimestamp.current = state.timestamp;
+        },
+        (error) => {
+          toast({
+            variant: "destructive",
+            title: "Firestore Error",
+            description: error.message || "Could not save the result to the database.",
+          });
+        }
+      );
     }
   }, [state, firestore, toast]);
 
