@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "photo-analysis-placeholder",
+      "description": "A placeholder image of a chicken farm for analysis",
+      "imageUrl": "https://images.unsplash.com/photo-1720037195705-cc83e1d6a62b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjaGlja2VuJTIwZmFybXxlbnwwfHx8fDE3NjEwNzg1MTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "chicken farm"
+    }
+  ]
 }
