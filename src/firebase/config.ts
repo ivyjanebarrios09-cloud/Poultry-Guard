@@ -1,5 +1,4 @@
 
-
 // In a real app, you would initialize Firebase here and populate the config with your project's credentials.
 // For this sample, the configuration is managed by the Firebase Hosting environment.
 
