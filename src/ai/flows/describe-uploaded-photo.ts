@@ -15,7 +15,7 @@ const DescribeUploadedPhotoInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
-      "A photo, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A photo, as a data URI or a public URL. Expected format: 'data:<mimetype>;base64,<encoded_data>' or 'http(s)://...'"
     ),
 });
 export type DescribeUploadedPhotoInput = z.infer<typeof DescribeUploadedPhotoInputSchema>;
@@ -35,9 +35,9 @@ const prompt = ai.definePrompt({
   name: 'describeUploadedPhotoPrompt',
   input: {schema: DescribeUploadedPhotoInputSchema},
   output: {schema: DescribeUploadedPhotoOutputSchema},
-  prompt: `You are an AI that describes the content of an image.
+  prompt: `You are an AI that describes the content of an image, specifically for a poultry farm monitoring system.
 
-  Describe the following photo:
+  Describe the following photo, focusing on details relevant to a farm manager, such as the number of flies, the state of the equipment, and any anomalies:
 
   {{media url=photoDataUri}}`,
 });

@@ -34,6 +34,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { AlertTriangle, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const flyCountTrendData = [
     { date: 'Sep 28', count: 60 },
@@ -130,14 +131,18 @@ export default function DashboardPage() {
             <CardDescription>Generate and download fly count summaries.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex space-x-1 rounded-md bg-muted p-1">
-                <Button variant="ghost" className="w-full bg-background shadow-sm">Weekly</Button>
-                <Button variant="ghost" className="w-full">Monthly</Button>
-            </div>
+             <Link href="/dashboard/reports" className="w-full">
+                <div className="flex space-x-1 rounded-md bg-muted p-1">
+                    <Button variant="ghost" className="w-full bg-background shadow-sm">Weekly</Button>
+                    <Button variant="ghost" className="w-full">Monthly</Button>
+                </div>
+            </Link>
             <p className="text-center text-xs text-muted-foreground mt-2">Select a period to generate a report.</p>
           </CardContent>
           <CardFooter>
-            <Button className="w-full"><Download className="mr-2 h-4 w-4" /> Download Report</Button>
+            <Link href="/dashboard/reports" className="w-full">
+              <Button className="w-full"><Download className="mr-2 h-4 w-4" /> Download Report</Button>
+            </Link>
           </CardFooter>
         </Card>
       </div>

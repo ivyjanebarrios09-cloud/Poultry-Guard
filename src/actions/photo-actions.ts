@@ -11,7 +11,7 @@ type FormState = {
 export async function describePhotoAction(prevState: FormState, formData: FormData): Promise<FormState> {
   const photoDataUri = formData.get('photoDataUri');
 
-  if (typeof photoDataUri !== 'string' || !photoDataUri.startsWith('data:image')) {
+  if (typeof photoDataUri !== 'string' || !photoDataUri.startsWith('data:image') && !photoDataUri.startsWith('http')) {
     return { description: null, error: 'Invalid image data. Please upload a valid image file.', timestamp: Date.now() };
   }
 

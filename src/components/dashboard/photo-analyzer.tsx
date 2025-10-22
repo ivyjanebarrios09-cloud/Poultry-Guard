@@ -1,7 +1,7 @@
 'use client';
 
 import { useFormStatus } from 'react-dom';
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/card';
 import { describePhotoAction } from '@/actions/photo-actions';
 import { LoaderCircle, Bot, RefreshCw } from 'lucide-react';
-import React, { useState } from 'react';
 import Image from 'next/image';
 import { createSupabaseClient } from '@/lib/supabase/client';
 import { Skeleton } from '../ui/skeleton';
@@ -24,15 +23,27 @@ const initialState = {
   timestamp: Date.now(),
 };
 
-function SubmitButton() {
+function SubmitButton({ isPhotoAvailable }: { isPhotoAvailable: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending || !useFormStatus().data?.get('photoDataUri')}>
+    <Button type="submit" disabled={pending || !isPhotoAvailable}>
       {pending ? <LoaderCircle className="animate-spin" /> : '✨'}
       {pending ? 'Analyzing...' : 'Describe Photo'}
     </Button>
   );
 }
+
+async function toDataURL(url: string): Promise<string> {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
 
 export function PhotoAnalyzer() {
   const [state, formAction] = useActionState(describePhotoAction, initialState);
@@ -40,6 +51,7 @@ export function PhotoAnalyzer() {
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const supabase = createSupabaseClient();
 
   const fetchLatestPhoto = async () => {
@@ -68,10 +80,12 @@ export function PhotoAnalyzer() {
         
         if (publicUrlData) {
           const imageUrl = publicUrlData.publicUrl;
-          // Add a timestamp to bypass browser cache
           const uniqueUrl = `${imageUrl}?t=${new Date().getTime()}`;
           setPreview(uniqueUrl);
-          setPhotoDataUri(uniqueUrl);
+
+          // Convert to data URI for the AI
+          const dataUrl = await toDataURL(uniqueUrl);
+          setPhotoDataUri(dataUrl);
         } else {
            throw new Error('Could not get public URL for the latest photo.');
         }
@@ -100,7 +114,7 @@ export function PhotoAnalyzer() {
   return (
     <div className="flex flex-col items-center">
       <div className="w-full max-w-2xl">
-        <form action={formAction}>
+        <form ref={formRef} action={formAction}>
           <input type="hidden" name="photoDataUri" value={photoDataUri || ''} />
           <Card className="shadow-lg">
             <CardHeader>
@@ -138,7 +152,7 @@ export function PhotoAnalyzer() {
                     <RefreshCw className={isLoading ? "animate-spin" : ""} />
                     Refresh
                 </Button>
-                <SubmitButton />
+                <SubmitButton isPhotoAvailable={!!photoDataUri} />
             </CardFooter>
           </Card>
         </form>
