@@ -27,6 +27,7 @@ const initialState = {
   analysis: null,
   error: null,
   timestamp: Date.now(),
+  imageUrl: null,
 };
 
 function SubmitButton({ isPhotoAvailable }: { isPhotoAvailable: boolean }) {
@@ -151,10 +152,10 @@ export function PhotoAnalyzer() {
   }, []);
 
   useEffect(() => {
-    if (state.flyCount !== null && state.analysis && state.timestamp > lastProcessedTimestamp.current && preview) {
+    if (state.flyCount !== null && state.analysis && state.imageUrl && state.timestamp > lastProcessedTimestamp.current) {
       saveToFirestore(
         firestore!,
-        { flyCount: state.flyCount, analysis: state.analysis, imageUrl: preview },
+        { flyCount: state.flyCount, analysis: state.analysis, imageUrl: state.imageUrl },
         () => {
           toast({
             title: "Analysis Saved",
@@ -170,8 +171,15 @@ export function PhotoAnalyzer() {
           });
         }
       );
+    } else if (state.error && state.timestamp > lastProcessedTimestamp.current) {
+      toast({
+        variant: "destructive",
+        title: "Analysis Error",
+        description: state.error,
+      });
+      lastProcessedTimestamp.current = state.timestamp;
     }
-  }, [state, firestore, toast, preview]);
+  }, [state, firestore, toast]);
 
   const handleRefresh = () => {
     fetchLatestPhoto();
@@ -182,6 +190,7 @@ export function PhotoAnalyzer() {
       <div className="w-full max-w-2xl">
         <form ref={formRef} action={formAction}>
           <input type="hidden" name="photoDataUri" value={photoDataUri || ''} />
+          <input type="hidden" name="imageUrl" value={preview || ''} />
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Fly Count Analysis</CardTitle>
@@ -223,7 +232,7 @@ export function PhotoAnalyzer() {
           </Card>
         </form>
 
-        {(useFormStatus().pending || state.flyCount !== null || state.error) && (
+        {(useFormStatus().pending || (state.flyCount !== null && state.timestamp > lastProcessedTimestamp.current) || (state.error && state.timestamp > lastProcessedTimestamp.current)) && (
           <Card className="mt-8">
             <CardHeader className="flex flex-row items-start gap-4">
               <div className="bg-primary/10 p-2 rounded-full">
@@ -237,13 +246,12 @@ export function PhotoAnalyzer() {
               </div>
             </CardHeader>
             <CardContent>
-              {useFormStatus().pending && (
+              {useFormStatus().pending && !state.flyCount ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <LoaderCircle className="animate-spin h-4 w-4" />
                   <span>Analyzing photo...</span>
                 </div>
-              )}
-              {state.flyCount !== null && (
+              ) : state.flyCount !== null ? (
                 <div className="flex items-center gap-4">
                   <div className="text-4xl font-bold">{state.flyCount}</div>
                   <div className='flex flex-col'>
@@ -251,8 +259,9 @@ export function PhotoAnalyzer() {
                     {state.analysis && <Badge variant={getAnalysisVariant(state.analysis)}>{state.analysis}</Badge>}
                   </div>
                 </div>
-              )}
-              {state.error && <p className="text-destructive">{state.error}</p>}
+              ) : state.error ? (
+                <p className="text-destructive">{state.error}</p>
+              ) : null}
             </CardContent>
           </Card>
         )}
