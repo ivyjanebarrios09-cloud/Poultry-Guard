@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { LogOut, Settings, User as UserIcon, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './ui/sheet';
 
 const menuItems = [
   { href: '/dashboard', label: 'Home' },
@@ -67,7 +67,7 @@ export function AppHeader() {
       </div>
       
       {/* Center: Navigation Links (Desktop) */}
-      <nav className="hidden md:flex flex-row items-center gap-5 text-sm lg:gap-6">
+      <nav className="hidden md:flex flex-row items-center justify-center gap-5 text-sm lg:gap-6 flex-1">
         {navLinks}
       </nav>
 
@@ -86,27 +86,30 @@ export function AppHeader() {
                 </Button>
                 </SheetTrigger>
                 <SheetContent side="left">
-                <nav className="grid gap-6 text-lg font-medium">
-                    <Link
-                    href="/dashboard"
-                    className="flex items-center gap-2 text-lg font-semibold"
-                    >
-                    <Image src="/image/logoo.png" alt="PoultryGuard Logo" width={32} height={32} className="text-primary" />
-                    <span className="sr-only">PoultryGuard</span>
-                    </Link>
-                    {menuItems.map((item) => (
-                        <Link
-                            key={item.label}
-                            href={item.href}
-                            className={cn(
-                                "transition-colors hover:text-foreground",
-                                pathname === item.href ? "text-foreground" : "text-muted-foreground"
-                            )}
-                            >
-                            {item.label}
-                        </Link>
-                    ))}
-                </nav>
+                  <SheetHeader>
+                    <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                  </SheetHeader>
+                  <nav className="grid gap-6 text-lg font-medium mt-4">
+                      <Link
+                      href="/dashboard"
+                      className="flex items-center gap-2 text-lg font-semibold"
+                      >
+                      <Image src="/image/logoo.png" alt="PoultryGuard Logo" width={32} height={32} className="text-primary" />
+                      <span className="sr-only">PoultryGuard</span>
+                      </Link>
+                      {menuItems.map((item) => (
+                          <Link
+                              key={item.label}
+                              href={item.href}
+                              className={cn(
+                                  "transition-colors hover:text-foreground",
+                                  pathname === item.href ? "text-foreground" : "text-muted-foreground"
+                              )}
+                              >
+                              {item.label}
+                          </Link>
+                      ))}
+                  </nav>
                 </SheetContent>
             </Sheet>
         </div>
