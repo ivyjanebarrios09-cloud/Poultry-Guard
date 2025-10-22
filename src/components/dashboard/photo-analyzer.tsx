@@ -1,7 +1,7 @@
 'use client';
 
 import { useFormStatus } from 'react-dom';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,9 +15,8 @@ import { describePhotoAction } from '@/actions/photo-actions';
 import { LoaderCircle, Bot, RefreshCw } from 'lucide-react';
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-
-const placeholder = PlaceHolderImages.find(p => p.id === 'photo-analysis-placeholder')!;
+import { createSupabaseClient } from '@/lib/supabase/client';
+import { Skeleton } from '../ui/skeleton';
 
 const initialState = {
   description: null,
@@ -37,18 +36,64 @@ function SubmitButton() {
 
 export function PhotoAnalyzer() {
   const [state, formAction] = useActionState(describePhotoAction, initialState);
-  const [preview, setPreview] = useState<string | null>(placeholder.imageUrl);
-  const [photoDataUri, setPhotoDataUri] = useState<string | null>(placeholder.imageUrl);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const supabase = createSupabaseClient();
 
-  // In a real app, this would fetch the latest photo
-  const handleRefresh = () => {
-    // For now, we'll just cycle through some placeholder seeds
-    const newSeed = Math.floor(Math.random() * 100) + 1;
-    const newUrl = `https://picsum.photos/seed/${newSeed}/1280/720`;
-    setPreview(newUrl);
-    setPhotoDataUri(newUrl);
+  const fetchLatestPhoto = async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const { data, error } = await supabase.storage
+        .from('poultryguardPhoto')
+        .list('', {
+          limit: 1,
+          offset: 0,
+          sortBy: { column: 'created_at', order: 'desc' },
+        });
+
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        const latestFile = data[0];
+        const { data: publicUrlData } = supabase.storage
+          .from('poultryguardPhoto')
+          .getPublicUrl(latestFile.name);
+        
+        if (publicUrlData) {
+          const imageUrl = publicUrlData.publicUrl;
+          // Add a timestamp to bypass browser cache
+          const uniqueUrl = `${imageUrl}?t=${new Date().getTime()}`;
+          setPreview(uniqueUrl);
+          setPhotoDataUri(uniqueUrl);
+        } else {
+           throw new Error('Could not get public URL for the latest photo.');
+        }
+
+      } else {
+        setFetchError('No photos found in the bucket.');
+      }
+    } catch (error) {
+      console.error('Error fetching latest photo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while fetching the photo.';
+      setFetchError(`Failed to load image: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  useEffect(() => {
+    fetchLatestPhoto();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRefresh = () => {
+    fetchLatestPhoto();
+  };
 
   return (
     <div className="flex flex-col items-center">
@@ -64,14 +109,25 @@ export function PhotoAnalyzer() {
             </CardHeader>
             <CardContent>
               <div className="aspect-video w-full relative overflow-hidden rounded-lg border">
-                {preview && (
+                {isLoading ? (
+                  <Skeleton className="w-full h-full" />
+                ) : fetchError ? (
+                  <div className="w-full h-full flex items-center justify-center bg-muted text-destructive-foreground p-4">
+                    <p>{fetchError}</p>
+                  </div>
+                ) : preview ? (
                   <Image
                     src={preview}
                     alt="Latest monitoring photo"
                     fill
                     className="object-cover"
                     data-ai-hint="monitoring device"
+                    unoptimized // Important for bypassing Next.js image cache with URL params
                   />
+                ) : (
+                   <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+                    <p>No photo to display.</p>
+                  </div>
                 )}
               </div>
             </CardContent>
