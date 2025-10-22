@@ -11,14 +11,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { describePhotoAction } from '@/actions/photo-actions';
-import { LoaderCircle, Bot, RefreshCw } from 'lucide-react';
+import { analyzePhotoAction } from '@/actions/photo-actions';
+import { LoaderCircle, Bot, RefreshCw, Bug } from 'lucide-react';
 import Image from 'next/image';
 import { createSupabaseClient } from '@/lib/supabase/client';
 import { Skeleton } from '../ui/skeleton';
+import { Badge } from '../ui/badge';
+import { cn } from '@/lib/utils';
 
 const initialState = {
-  description: null,
+  flyCount: null,
+  analysis: null,
   error: null,
   timestamp: Date.now(),
 };
@@ -27,8 +30,8 @@ function SubmitButton({ isPhotoAvailable }: { isPhotoAvailable: boolean }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending || !isPhotoAvailable}>
-      {pending ? <LoaderCircle className="animate-spin" /> : '✨'}
-      {pending ? 'Analyzing...' : 'Describe Photo'}
+      {pending ? <LoaderCircle className="animate-spin" /> : <Bug />}
+      {pending ? 'Counting Flies...' : 'Count Flies'}
     </Button>
   );
 }
@@ -46,13 +49,26 @@ async function toDataURL(url: string): Promise<string> {
 
 
 export function PhotoAnalyzer() {
-  const [state, formAction] = useActionState(describePhotoAction, initialState);
+  const [state, formAction] = useActionState(analyzePhotoAction, initialState);
   const [preview, setPreview] = useState<string | null>(null);
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const supabase = createSupabaseClient();
+
+  const getAnalysisVariant = (analysis: string | null) => {
+    switch (analysis?.toLowerCase()) {
+      case 'critical':
+        return 'destructive';
+      case 'high':
+        return 'destructive';
+      case 'moderate':
+        return 'secondary';
+      default:
+        return 'default';
+    }
+  }
 
   const fetchLatestPhoto = async () => {
     setIsLoading(true);
@@ -118,9 +134,9 @@ export function PhotoAnalyzer() {
           <input type="hidden" name="photoDataUri" value={photoDataUri || ''} />
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle>Latest Monitoring Photo</CardTitle>
+              <CardTitle>Fly Count Analysis</CardTitle>
               <CardDescription>
-                The most recent photo from your monitoring device.
+                Use the AI to count the number of flies in the latest trap photo.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -157,7 +173,7 @@ export function PhotoAnalyzer() {
           </Card>
         </form>
 
-        {(useFormStatus().pending || state.description || state.error) && (
+        {(useFormStatus().pending || state.flyCount !== null || state.error) && (
           <Card className="mt-8">
             <CardHeader className="flex flex-row items-start gap-4">
               <div className="bg-primary/10 p-2 rounded-full">
@@ -166,7 +182,7 @@ export function PhotoAnalyzer() {
               <div>
                 <CardTitle>AI Analysis</CardTitle>
                 <CardDescription>
-                  Here&apos;s what the AI sees in your photo.
+                  Here's the result from the AI-powered fly count.
                 </CardDescription>
               </div>
             </CardHeader>
@@ -177,7 +193,15 @@ export function PhotoAnalyzer() {
                   <span>Analyzing photo...</span>
                 </div>
               )}
-              {state.description && <p className="prose prose-sm max-w-none text-foreground">{state.description}</p>}
+              {state.flyCount !== null && (
+                <div className="flex items-center gap-4">
+                  <div className="text-4xl font-bold">{state.flyCount}</div>
+                  <div className='flex flex-col'>
+                    <p className='text-lg font-medium'>Flies Detected</p>
+                    {state.analysis && <Badge variant={getAnalysisVariant(state.analysis)}>{state.analysis}</Badge>}
+                  </div>
+                </div>
+              )}
               {state.error && <p className="text-destructive">{state.error}</p>}
             </CardContent>
           </Card>
