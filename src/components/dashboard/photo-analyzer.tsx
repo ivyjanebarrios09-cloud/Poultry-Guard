@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { describePhotoAction } from '@/actions/photo-actions';
 import { LoaderCircle, Image as ImageIcon, Bot, Upload } from 'lucide-react';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useActionState } from 'react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
@@ -37,7 +37,7 @@ function SubmitButton() {
 }
 
 export function PhotoAnalyzer() {
-  const [state, formAction] = useFormState(describePhotoAction, initialState);
+  const [state, formAction] = useActionState(describePhotoAction, initialState);
   const [preview, setPreview] = useState<string | null>(placeholder.imageUrl);
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

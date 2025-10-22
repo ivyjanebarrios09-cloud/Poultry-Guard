@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -21,7 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { generateReportAction } from '@/actions/report-actions';
 import { Download, LoaderCircle, FileText, Bot } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useActionState, useState } from 'react';
 
 const initialState = {
   summary: null,
@@ -41,7 +41,7 @@ function SubmitButton() {
 }
 
 export function ReportGenerator() {
-  const [state, formAction] = useFormState(generateReportAction, initialState);
+  const [state, formAction] = useActionState(generateReportAction, initialState);
   const [reportType, setReportType] = useState('weekly');
 
   const handleDownload = () => {
