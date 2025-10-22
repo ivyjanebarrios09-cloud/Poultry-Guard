@@ -11,11 +11,15 @@ type FormState = {
 }
 
 export async function analyzePhotoAction(prevState: FormState, formData: FormData): Promise<FormState> {
-  const photoDataUri = formData.get('photoDataUri');
+  const photoDataUri = formData.get('photoDataUri') as string | null;
   const imageUrl = formData.get('imageUrl') as string | null;
 
-  if (typeof photoDataUri !== 'string' || !photoDataUri.startsWith('data:image') && !photoDataUri.startsWith('http')) {
-    return { flyCount: null, analysis: null, error: 'Invalid image data. Please upload a valid image file.', timestamp: Date.now(), imageUrl: null };
+  if (!photoDataUri || !imageUrl) {
+    return { flyCount: null, analysis: null, error: 'Invalid image data. Missing photo URI or image URL.', timestamp: Date.now(), imageUrl: null };
+  }
+
+  if (typeof photoDataUri !== 'string' || !photoDataUri.startsWith('data:image')) {
+    return { flyCount: null, analysis: null, error: 'Invalid image data URI. Please provide a valid data URI.', timestamp: Date.now(), imageUrl: null };
   }
 
   try {
