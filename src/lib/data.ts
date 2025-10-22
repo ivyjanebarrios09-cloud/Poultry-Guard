@@ -20,13 +20,6 @@ export type Notification = {
   read: boolean;
 };
 
-export const flyCountLogs: FlyCountLog[] = [
-  { id: '1', date: '2024-07-21T10:00:00Z', count: 152, analysis: 'Slight increase from last week.' },
-  { id: '2', date: '2024-07-14T10:00:00Z', count: 140, analysis: 'Stable count.' },
-  { id: '3', date: '2024-07-07T10:00:00Z', count: 135, analysis: 'Count within acceptable limits.' },
-  { id: '4', date: '2024-06-30T10:00:00Z', count: 168, analysis: 'Spike detected, requires attention.' },
-  { id: '5', date: '2024-06-23T10:00:00Z', count: 120, analysis: 'Low count, effective control.' },
-];
 
 export const devices: Device[] = [
   { id: 'PGP-001', location: 'Barn A, Section 1', status: 'Online', lastSeen: '2024-07-21T12:05:00Z' },
@@ -42,3 +35,6 @@ export const notifications: Notification[] = [
   { id: '3', title: 'Weekly Report Ready', description: 'Your weekly fly count summary report is generated and ready for download.', timestamp: '2024-07-19T17:00:00Z', read: true },
   { id: '4', title: 'Firmware Update', description: 'All devices were successfully updated to the latest firmware version.', timestamp: '2024-07-18T02:00:00Z', read: true },
 ];
+
+// This data is now fetched from Firestore
+export const flyCountLogs: FlyCountLog[] = [];

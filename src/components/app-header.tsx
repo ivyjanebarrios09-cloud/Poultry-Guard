@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { LogOut, Settings, User as UserIcon, Menu } from 'lucide-react';
+import { LogOut, Settings, User as UserIcon, Menu, Bug } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './ui/sheet';
 
@@ -22,6 +22,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Home' },
   { href: '/dashboard/history', label: 'History' },
   { href: '/dashboard/calendar', label: 'Calendar' },
+  { href: '/dashboard/fly-count', label: 'Logs'},
   { href: '/dashboard/photo', label: 'Photo' },
   { href: '/dashboard/instructions', label: 'Instructions' },
   { href: '/dashboard/about', label: 'About' },

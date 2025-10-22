@@ -18,6 +18,9 @@ import { createSupabaseClient } from '@/lib/supabase/client';
 import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
+import { useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp, Firestore } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 const initialState = {
   flyCount: null,
@@ -47,6 +50,15 @@ async function toDataURL(url: string): Promise<string> {
     });
 }
 
+const saveToFirestore = (db: Firestore, data: { flyCount: number; analysis: string; }) => {
+  if (!db) return;
+  const log = {
+    ...data,
+    timestamp: serverTimestamp(),
+  };
+  addDoc(collection(db, 'fly-count-logs'), log);
+};
+
 
 export function PhotoAnalyzer() {
   const [state, formAction] = useActionState(analyzePhotoAction, initialState);
@@ -56,6 +68,9 @@ export function PhotoAnalyzer() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const supabase = createSupabaseClient();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const lastProcessedTimestamp = useRef(0);
 
   const getAnalysisVariant = (analysis: string | null) => {
     switch (analysis?.toLowerCase()) {
@@ -122,6 +137,25 @@ export function PhotoAnalyzer() {
     fetchLatestPhoto();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (state.flyCount !== null && state.analysis && state.timestamp > lastProcessedTimestamp.current) {
+      if (firestore) {
+        saveToFirestore(firestore, { flyCount: state.flyCount, analysis: state.analysis });
+        toast({
+          title: "Analysis Saved",
+          description: `Fly count of ${state.flyCount} has been saved to the database.`,
+        });
+        lastProcessedTimestamp.current = state.timestamp;
+      } else {
+         toast({
+          variant: "destructive",
+          title: "Firestore Error",
+          description: "Could not connect to the database to save the result.",
+        });
+      }
+    }
+  }, [state, firestore, toast]);
 
   const handleRefresh = () => {
     fetchLatestPhoto();
