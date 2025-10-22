@@ -2,19 +2,24 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { mockSignIn, mockSignUp, mockSignOut, authStateChanged } from '@/lib/firebase/auth';
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut as firebaseSignOut,
+  User 
+} from 'firebase/auth';
+import { initializeFirebase } from '@/firebase';
 
-type User = {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-};
+// Initialize firebase app if not already initialized
+initializeFirebase();
 
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  signIn: typeof mockSignIn;
-  signUp: typeof mockSignUp;
+  signIn: typeof signInWithEmailAndPassword;
+  signUp: typeof createUserWithEmailAndPassword;
   signOut: () => void;
 };
 
@@ -24,27 +29,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const auth = getAuth();
 
   useEffect(() => {
-    const unsubscribe = authStateChanged((authUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       setUser(authUser);
       setLoading(false);
     });
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []);
+  }, [auth]);
 
   const signOut = async () => {
-    await mockSignOut();
+    await firebaseSignOut(auth);
     router.push('/login');
   };
 
   const value = {
     user,
     loading,
-    signIn: mockSignIn,
-    signUp: mockSignUp,
+    signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
+    signUp: (email, password) => createUserWithEmailAndPassword(auth, email, password),
     signOut,
   };
 
