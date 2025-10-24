@@ -68,6 +68,7 @@ export function PhotoAnalyzer() {
   const [preview, setPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isTransitioning, startTransition] = useTransition();
   
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -132,7 +133,7 @@ export function PhotoAnalyzer() {
   }, []);
 
   useEffect(() => {
-    if (preview && !isAnalyzing && !analysisTriggered.current) {
+    if (preview && !isAnalyzing && !analysisTriggered.current && !isTransitioning) {
       const handleAnalyze = async () => {
         analysisTriggered.current = true;
         try {
@@ -140,7 +141,9 @@ export function PhotoAnalyzer() {
           const formData = new FormData();
           formData.append('photoDataUri', dataUrl);
           formData.append('imageUrl', preview);
-          formAction(formData);
+          startTransition(() => {
+            formAction(formData);
+          });
         } catch(e) {
            const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred converting image.';
             toast({
@@ -152,7 +155,7 @@ export function PhotoAnalyzer() {
       };
       handleAnalyze();
     }
-  }, [preview, isAnalyzing, formAction, toast]);
+  }, [preview, isAnalyzing, formAction, toast, isTransitioning]);
 
   useEffect(() => {
     if (state.timestamp > lastProcessedTimestamp.current) {
@@ -193,6 +196,8 @@ export function PhotoAnalyzer() {
     }
   }, [state, firestore, toast]);
 
+  const isProcessing = isAnalyzing || isTransitioning;
+
   return (
     <div className="flex flex-col items-center">
       <div className="w-full max-w-2xl">
@@ -229,7 +234,7 @@ export function PhotoAnalyzer() {
             </CardContent>
           </Card>
 
-        {(isAnalyzing || state.flyCount !== null || state.error) && (
+        {(isProcessing || state.flyCount !== null || state.error) && (
           <Card className="mt-8">
             <CardHeader className="flex flex-row items-start gap-4">
               <div className="bg-primary/10 p-2 rounded-full">
@@ -243,7 +248,7 @@ export function PhotoAnalyzer() {
               </div>
             </CardHeader>
             <CardContent>
-              {isAnalyzing || isLoading ? (
+              {isProcessing || isLoading ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <LoaderCircle className="animate-spin h-4 w-4" />
                   <span>{isLoading ? 'Fetching photo...' : 'Analyzing photo...'}</span>
