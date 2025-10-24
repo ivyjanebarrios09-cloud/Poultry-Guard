@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState, useRef, useTransition } from 'react';
+import { useActionState, useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -11,32 +11,35 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { analyzePhotoAction } from '@/actions/photo-actions';
-import { LoaderCircle, Bot, Bug } from 'lucide-react';
+import { LoaderCircle, Bot, Bug, RefreshCcw } from 'lucide-react';
 import Image from 'next/image';
 import { createSupabaseClient } from '@/lib/supabase/client';
 import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
 import { useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, Firestore } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const initialState = {
   flyCount: null,
   analysis: null,
   error: null,
-  timestamp: 0, // Initialize with 0 to ensure first result is processed
+  timestamp: 0,
   imageUrl: null,
 };
 
 async function toDataURL(url: string): Promise<string> {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
+  const response = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image through proxy: ${response.statusText}`);
+  }
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 const saveToFirestore = (db: Firestore, data: { flyCount: number; analysis: string; imageUrl: string; }, onSuccess: () => void, onError: (error: Error) => void) => {
@@ -60,21 +63,18 @@ const saveToFirestore = (db: Firestore, data: { flyCount: number; analysis: stri
     });
 };
 
-
 export function PhotoAnalyzer() {
   const [state, formAction] = useActionState(analyzePhotoAction, initialState);
   const [preview, setPreview] = useState<string | null>(null);
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
   
   const formRef = useRef<HTMLFormElement>(null);
-  const supabase = createSupabaseClient();
   const firestore = useFirestore();
   const { toast } = useToast();
   const lastProcessedTimestamp = useRef(0);
+  const { pending: isAnalyzing } = useActionState(analyzePhotoAction, initialState) as { pending: boolean };
 
   const getAnalysisVariant = (analysis: string | null) => {
     switch (analysis?.toLowerCase()) {
@@ -88,14 +88,16 @@ export function PhotoAnalyzer() {
     }
   }
 
-  useEffect(() => {
-    const fetchAndAnalyze = async () => {
+  const fetchLatestPhoto = async () => {
       setIsLoading(true);
       setFetchError(null);
       setPreview(null);
       setPhotoDataUri(null);
+      // Reset previous analysis state
+      lastProcessedTimestamp.current = Date.now(); 
 
       try {
+        const supabase = createSupabaseClient();
         const { data, error } = await supabase.storage
           .from('poultryguardPhoto')
           .list('photos', {
@@ -116,18 +118,9 @@ export function PhotoAnalyzer() {
             const imageUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
             setPreview(imageUrl);
             
-            const dataUrl = await toDataURL(imageUrl);
-            setPhotoDataUri(dataUrl);
-
-            // Automatically trigger analysis
-            const formData = new FormData();
-            formData.append('photoDataUri', dataUrl);
-            formData.append('imageUrl', imageUrl);
-            
-            setIsAnalyzing(true);
-            startTransition(() => {
-              formAction(formData);
-            });
+            // This is fetched on-demand when the user clicks analyze
+            // const dataUrl = await toDataURL(imageUrl);
+            // setPhotoDataUri(dataUrl);
 
           } else {
              throw new Error('Could not get public URL for the latest photo.');
@@ -136,25 +129,21 @@ export function PhotoAnalyzer() {
           setFetchError('No photos found in the bucket to analyze.');
         }
       } catch (error) {
-        console.error('Error fetching or analyzing photo:', error);
+        console.error('Error fetching photo:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        setFetchError(`Failed to load or analyze image: ${errorMessage}`);
+        setFetchError(`Failed to load image: ${errorMessage}`);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchAndAnalyze();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Runs only once on component mount
 
   useEffect(() => {
-    // Stop analyzing spinner when results come in
-    if (state.timestamp > 0) {
-      setIsAnalyzing(false);
-    }
-    
-    // Process results (save to Firestore, show toasts)
+    fetchLatestPhoto();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (state.timestamp > lastProcessedTimestamp.current) {
        lastProcessedTimestamp.current = state.timestamp;
       if (state.error) {
@@ -164,8 +153,16 @@ export function PhotoAnalyzer() {
           description: state.error,
         });
       } else if (state.flyCount !== null && state.analysis && state.imageUrl) {
+        if (!firestore) {
+           toast({
+              variant: "destructive",
+              title: "Firestore Error",
+              description: "Firestore is not available to save the result.",
+            });
+          return;
+        }
         saveToFirestore(
-          firestore!,
+          firestore,
           { flyCount: state.flyCount, analysis: state.analysis, imageUrl: state.imageUrl },
           () => {
             toast({
@@ -185,6 +182,32 @@ export function PhotoAnalyzer() {
     }
   }, [state, firestore, toast]);
 
+  const handleAnalyzeClick = async () => {
+    if (!preview) {
+      toast({
+        variant: "destructive",
+        title: "No Photo",
+        description: "There is no photo to analyze.",
+      });
+      return;
+    }
+    
+    try {
+      const dataUrl = await toDataURL(preview);
+      const formData = new FormData();
+      formData.append('photoDataUri', dataUrl);
+      formData.append('imageUrl', preview);
+      formAction(formData);
+    } catch(e) {
+       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred converting image.';
+        toast({
+          variant: "destructive",
+          title: "Image Error",
+          description: errorMessage,
+        });
+    }
+  };
+
   return (
     <div className="flex flex-col items-center">
       <div className="w-full max-w-2xl">
@@ -192,7 +215,7 @@ export function PhotoAnalyzer() {
             <CardHeader>
               <CardTitle>Fly Count Analysis</CardTitle>
               <CardDescription>
-                Automatically analyzing the latest fly trap photo.
+                The latest fly trap photo from your device is shown below.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -219,9 +242,19 @@ export function PhotoAnalyzer() {
                 )}
               </div>
             </CardContent>
+             <CardFooter className="flex justify-end gap-2">
+                <Button variant="outline" onClick={fetchLatestPhoto} disabled={isLoading}>
+                    <RefreshCcw className={isLoading ? 'animate-spin' : ''} />
+                    Refresh Photo
+                </Button>
+                <Button onClick={handleAnalyzeClick} disabled={isAnalyzing || isLoading || !preview}>
+                    {isAnalyzing ? <LoaderCircle className="animate-spin" /> : <Bug />}
+                    {isAnalyzing ? 'Analyzing...' : 'Count Flies'}
+                </Button>
+            </CardFooter>
           </Card>
 
-        {(isAnalyzing || state.flyCount !== null || state.error) && (
+        {(isAnalyzing || (state.flyCount !== null && state.timestamp >= lastProcessedTimestamp.current) || (state.error && state.timestamp >= lastProcessedTimestamp.current)) && (
           <Card className="mt-8">
             <CardHeader className="flex flex-row items-start gap-4">
               <div className="bg-primary/10 p-2 rounded-full">
@@ -235,12 +268,14 @@ export function PhotoAnalyzer() {
               </div>
             </CardHeader>
             <CardContent>
-              {isAnalyzing && !state.flyCount ? (
+              {isAnalyzing ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <LoaderCircle className="animate-spin h-4 w-4" />
                   <span>Analyzing photo...</span>
                 </div>
-              ) : state.flyCount !== null && state.timestamp === lastProcessedTimestamp.current ? (
+              ) : state.error && state.timestamp >= lastProcessedTimestamp.current ? (
+                <p className="text-destructive">{state.error}</p>
+              ) : state.flyCount !== null && state.timestamp >= lastProcessedTimestamp.current ? (
                 <div className="flex items-center gap-4">
                   <div className="text-4xl font-bold">{state.flyCount}</div>
                   <div className='flex flex-col'>
@@ -248,8 +283,6 @@ export function PhotoAnalyzer() {
                     {state.analysis && <Badge variant={getAnalysisVariant(state.analysis)}>{state.analysis}</Badge>}
                   </div>
                 </div>
-              ) : state.error && state.timestamp === lastProcessedTimestamp.current ? (
-                <p className="text-destructive">{state.error}</p>
               ) : null}
             </CardContent>
           </Card>
