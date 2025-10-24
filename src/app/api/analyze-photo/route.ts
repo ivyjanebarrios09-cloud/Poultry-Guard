@@ -44,6 +44,10 @@ async function saveToFirestore(data: { flyCount: number; analysis: string; image
   }
 }
 
+export async function GET() {
+  return NextResponse.json({ message: 'PoultryGuard Analysis Endpoint. Send a POST request to trigger analysis.' }, { status: 200 });
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 1. Fetch the latest photo from Supabase
