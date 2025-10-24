@@ -1,6 +1,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { createSupabaseClient } from '@/lib/supabase/client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { countFliesInPhoto } from '@/ai/flows/count-flies-in-photo';
 import { getFirestore, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { initializeApp, getApps, getApp } from 'firebase/app';
@@ -51,7 +51,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     // 1. Fetch the latest photo from Supabase
-    const supabase = createSupabaseClient();
+    const supabase = createSupabaseServerClient();
     const { data: listData, error: listError } = await supabase.storage
       .from('poultryguardPhoto')
       .list('photos', {
