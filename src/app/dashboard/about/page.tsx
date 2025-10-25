@@ -30,11 +30,11 @@ export default function AboutPage() {
     <div className="flex flex-col gap-12 w-full max-w-5xl mx-auto">
       <div className="relative w-full h-64 rounded-lg overflow-hidden shadow-lg">
         <Image
-          src="https://picsum.photos/seed/rainyday/1280/400"
-          alt="Abstract background image"
+          src="/image/about.jpg"
+          alt="The PoultryGuard development team"
           fill
           className="object-cover"
-          data-ai-hint="rainy window"
+          data-ai-hint="team meeting"
         />
       </div>
 
